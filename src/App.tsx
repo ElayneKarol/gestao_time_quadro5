@@ -23,7 +23,7 @@ export default function App() {
     ));
   };
 
-  // Função para submeter o formulário de nova tarefa (Atende a Dor 1 e Exigência 1)
+  // Função para submeter o formulário de nova tarefa
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -33,20 +33,18 @@ export default function App() {
     }
 
     const newTask: Task = {
-      id: `task-${Date.now()}`, // Gerador de ID único temporário
+      id: `task-${Date.now()}`,
       title: title.trim(),
       description: description.trim(),
-      status: 'todo', // Toda nova tarefa começa na coluna "A Fazer"
+      status: 'todo',
       priority,
       responsibleId,
       dueDate,
-      createdAt: new Date().toISOString().split('T')[0] // Data de hoje no formato YYYY-MM-DD
+      createdAt: new Date().toISOString().split('T')[0]
     };
 
-    // Adiciona a nova tarefa no início da lista
     setTasks(prev => [newTask, ...prev]);
 
-    // Limpa o formulário e fecha o modal
     setTitle('');
     setDescription('');
     setPriority('medium');
@@ -72,12 +70,6 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-xs font-medium text-slate-600">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              10 Colaboradores Ativos
-            </div>
-            
-            {/* Botão de Nova Tarefa */}
             <button 
               onClick={() => setIsModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
@@ -90,10 +82,60 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         
-        {/* ESPAÇO PARA OS INDICADORES (FOCO DO DIA 2) */}
-        <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 shadow-xs">
-          💡 **Espaço do Dashboard:** Amanhã vamos renderizar os KPIs inteligentes do Ricardo aqui em cima!
-        </div>
+        {/* SEÇÃO DO DASHBOARD: CARGA DE TRABALHO POR INTEGRANTE */}
+        <section className="mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="mb-4">
+            <h2 className="text-base font-bold text-slate-900">📊 Carga de Trabalho do Time</h2>
+            <p className="text-xs text-slate-500">Total de tarefas pendentes (A Fazer + Em Andamento) alocadas por colaborador.</p>
+          </div>
+
+          {/* Grid responsivo mostrando os 10 membros */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {members.map(member => {
+              // Filtrando apenas tarefas pendentes (Ignorando as já concluídas)
+              const pendingTasksCount = tasks.filter(
+                task => task.responsibleId === member.id && task.status !== 'done'
+              ).length;
+
+              // Lógica de status de sobrecarga (Mais de 1 tarefa ativa = Carga Alta)
+              const isOverloaded = pendingTasksCount > 1;
+
+              return (
+                <div 
+                  key={member.id} 
+                  className={`p-3 rounded-xl border transition-all ${
+                    isOverloaded 
+                      ? 'bg-amber-50/60 border-amber-200' 
+                      : pendingTasksCount === 0 
+                        ? 'bg-slate-50/50 border-slate-150 opacity-60' 
+                        : 'bg-white border-slate-200'
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-1">
+                    <span className="font-semibold text-xs text-slate-900 truncate block max-w-[80%]">
+                      {member.name}
+                    </span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      isOverloaded 
+                        ? 'bg-amber-200 text-amber-800' 
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {pendingTasksCount}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">{member.role}</p>
+                  
+                  {/* Badge de alerta de sobrecarga para o Ricardo agir */}
+                  {isOverloaded && (
+                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100/50 px-1.5 py-0.5 rounded-sm mt-2 inline-block">
+                      ⚠️ Carga Limite
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         {/* QUADRO KANBAN */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -112,8 +154,6 @@ export default function App() {
               <div className="space-y-3 min-h-[500px]">
                 {tasks.filter(t => t.status === column.id).map(task => {
                   const responsible = members.find(m => m.id === task.responsibleId);
-                  
-                  // Lógica visual para tarefas atrasadas (Alerta de Prazo - Cura a Dor 3)
                   const isOverdue = task.status !== 'done' && new Date(task.dueDate) < new Date('2026-06-13');
 
                   return (
@@ -146,7 +186,7 @@ export default function App() {
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-slate-400">Prazo</span>
-                          <span className={`font-mono font-semibold mt-0.5 ${isOverdue ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
+                          <span className={`font-mono font-semibold mt-0.5 ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
                             {task.dueDate.split('-').reverse().join('/')}
                           </span>
                         </div>
@@ -185,7 +225,7 @@ export default function App() {
 
                 {tasks.filter(t => t.status === column.id).length === 0 && (
                   <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-400 bg-white/50">
-                    Nenhuma atividade em andamento.
+                    Nenhuma atividade aqui.
                   </div>
                 )}
               </div>
@@ -194,18 +234,13 @@ export default function App() {
         </div>
       </main>
 
-      {/* MODAL DE CADASTRO DE TAREFA (Exigência 1 do Case) */}
+      {/* MODAL DE CADASTRO DE TAREFA */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg text-slate-900">Nova Atividade para o Time</h3>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
-              >
-                ✕
-              </button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1">✕</button>
             </div>
 
             <form onSubmit={handleCreateTask} className="space-y-4">
@@ -225,8 +260,8 @@ export default function App() {
                 <textarea 
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  placeholder="Detalhes sobre as entregas necessárias..."
-                  rows={3}
+                  placeholder="Detalhes sobre as entregas..."
+                  rows={2}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
                 />
               </div>
@@ -237,12 +272,10 @@ export default function App() {
                   <select 
                     value={responsibleId}
                     onChange={e => setResponsibleId(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
                   >
                     {members.map(member => (
-                      <option key={member.id} value={member.id}>
-                        {member.name} ({member.role})
-                      </option>
+                      <option key={member.id} value={member.id}>{member.name}</option>
                     ))}
                   </select>
                 </div>
@@ -252,7 +285,7 @@ export default function App() {
                   <select 
                     value={priority}
                     onChange={e => setPriority(e.target.value as TaskPriority)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
                   >
                     <option value="low">Baixa</option>
                     <option value="medium">Média</option>
@@ -267,24 +300,13 @@ export default function App() {
                   type="date" 
                   value={dueDate}
                   onChange={e => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
               </div>
 
               <div className="pt-2 flex justify-end gap-3 text-sm font-medium">
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors"
-                >
-                  Criar Atividade
-                </button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm">Criar Atividade</button>
               </div>
             </form>
           </div>
