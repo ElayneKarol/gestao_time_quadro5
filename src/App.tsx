@@ -16,14 +16,18 @@ export default function App() {
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [dueDate, setDueDate] = useState('');
 
-  // Função para mover a tarefa de coluna
+  // DATA DO CONTEXTO DO CASE: 13 de Junho de 2026
+  const TODAY_STR = '2026-06-13';
+  const today = new Date(TODAY_STR);
+
+  // Lógica para mover a tarefa de coluna
   const moveTask = (taskId: string, newStatus: TaskStatus) => {
     setTasks(prev => prev.map(task => 
       task.id === taskId ? { ...task, status: newStatus } : task
     ));
   };
 
-  // Função para submeter o formulário de nova tarefa
+  // Lógica para submeter o formulário de nova tarefa
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -40,7 +44,7 @@ export default function App() {
       priority,
       responsibleId,
       dueDate,
-      createdAt: new Date().toISOString().split('T')[0]
+      createdAt: TODAY_STR
     };
 
     setTasks(prev => [newTask, ...prev]);
@@ -51,6 +55,11 @@ export default function App() {
     setDueDate('');
     setIsModalOpen(false);
   };
+
+  // CÁLCULOS DINÂMICOS DOS KPIS GERAIS (Atende às dores de controle do Ricardo)
+  const totalPending = tasks.filter(t => t.status !== 'done').length;
+  const totalDone = tasks.filter(t => t.status === 'done').length;
+  const totalOverdue = tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < today).length;
 
   const columns: { id: TaskStatus; title: string; bgColor: string }[] = [
     { id: 'todo', title: '📋 A Fazer', bgColor: 'bg-gray-100/80' },
@@ -82,6 +91,33 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         
+        {/* BLOCO SUPERIOR: METRICAS GERAIS DE ALERTA */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex justify-between items-center">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Demandas Ativas</p>
+              <h3 className="text-2xl font-black text-slate-800 mt-1">{totalPending}</h3>
+            </div>
+            <div className="bg-blue-50 text-blue-600 w-10 h-10 rounded-xl flex items-center justify-center font-bold">📂</div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex justify-between items-center">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Atrasos Críticos</p>
+              <h3 className="text-2xl font-black text-red-600 mt-1">{totalOverdue}</h3>
+            </div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${totalOverdue > 0 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>⚠️</div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex justify-between items-center">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Entregas Concluídas</p>
+              <h3 className="text-2xl font-black text-emerald-600 mt-1">{totalDone}</h3>
+            </div>
+            <div className="bg-emerald-50 text-emerald-600 w-10 h-10 rounded-xl flex items-center justify-center font-bold">🏆</div>
+          </div>
+        </div>
+
         {/* SEÇÃO DO DASHBOARD: CARGA DE TRABALHO POR INTEGRANTE */}
         <section className="mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
           <div className="mb-4">
@@ -89,15 +125,12 @@ export default function App() {
             <p className="text-xs text-slate-500">Total de tarefas pendentes (A Fazer + Em Andamento) alocadas por colaborador.</p>
           </div>
 
-          {/* Grid responsivo mostrando os 10 membros */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {members.map(member => {
-              // Filtrando apenas tarefas pendentes (Ignorando as já concluídas)
               const pendingTasksCount = tasks.filter(
                 task => task.responsibleId === member.id && task.status !== 'done'
               ).length;
 
-              // Lógica de status de sobrecarga (Mais de 1 tarefa ativa = Carga Alta)
               const isOverloaded = pendingTasksCount > 1;
 
               return (
@@ -125,7 +158,6 @@ export default function App() {
                   </div>
                   <p className="text-[10px] text-slate-400 mt-0.5 truncate">{member.role}</p>
                   
-                  {/* Badge de alerta de sobrecarga para o Ricardo agir */}
                   {isOverloaded && (
                     <span className="text-[9px] font-bold text-amber-700 bg-amber-100/50 px-1.5 py-0.5 rounded-sm mt-2 inline-block">
                       ⚠️ Carga Limite
@@ -154,7 +186,7 @@ export default function App() {
               <div className="space-y-3 min-h-[500px]">
                 {tasks.filter(t => t.status === column.id).map(task => {
                   const responsible = members.find(m => m.id === task.responsibleId);
-                  const isOverdue = task.status !== 'done' && new Date(task.dueDate) < new Date('2026-06-13');
+                  const isOverdue = task.status !== 'done' && new Date(task.dueDate) < today;
 
                   return (
                     <div key={task.id} className="bg-white p-4 rounded-xl border border-slate-150 shadow-xs hover:shadow-md transition-all">
@@ -186,7 +218,7 @@ export default function App() {
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-slate-400">Prazo</span>
-                          <span className={`font-mono font-semibold mt-0.5 ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
+                          <span className={`font-mono font-semibold mt-0.5 ${isOverdue ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
                             {task.dueDate.split('-').reverse().join('/')}
                           </span>
                         </div>
